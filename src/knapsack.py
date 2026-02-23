@@ -55,7 +55,7 @@ def new_knapsack(
     return dp
 
 
-def _knapsack_backtrack(
+def knapsack_backtrack(
     tower_tables: list[list[tuple[int, str]]], budget: int
 ) -> tuple[list[tuple[int, str]], list[int]]:
     """

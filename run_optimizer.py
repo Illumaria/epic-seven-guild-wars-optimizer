@@ -2,7 +2,7 @@ from pathlib import Path
 
 from yaml import safe_load
 
-from src.models import Config, DefenseTower, Guild, Satellite, Stronghold
+from src.models import Config
 
 
 def load_config(config_path: Path) -> Config:

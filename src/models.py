@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 from src.constants import HAVOC_PER_WIN, MAX_DMG_PER_TOKEN, MAX_WINS_PER_TOKEN
-from src.knapsack import _knapsack_backtrack, knapsack
+from src.knapsack import knapsack_backtrack, knapsack
 
 
 class Tower(BaseModel):
