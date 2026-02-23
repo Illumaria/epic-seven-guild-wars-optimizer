@@ -27,9 +27,13 @@ def _format_tower_attacks(tower: Tower, tokens: int) -> list[str]:
         damage = min(MAX_DMG_PER_TOKEN, current_hp)
         current_hp -= damage
         if current_hp <= 0:
-            lines.append(f"    {name} ({hp_before}/{tower.max_hp} HP) -> {tower.havoc_left} havoc (destroyed)")
+            lines.append(
+                f"    {name} ({hp_before}/{tower.max_hp} HP) -> {tower.havoc_left} havoc (destroyed)"
+            )
         else:
-            lines.append(f"    {name} ({hp_before}/{tower.max_hp} HP) -> {damage} havoc")
+            lines.append(
+                f"    {name} ({hp_before}/{tower.max_hp} HP) -> {damage} havoc"
+            )
     return lines
 
 
@@ -45,9 +49,9 @@ def format_attack_order(guild: Guild) -> str:
         tower_alloc = fortress.resolve_allocation(tokens)
         # Display: defense towers first, then stronghold, then satellites
         ordered = (
-            [(t, n) for t, n in tower_alloc if isinstance(t, DefenseTower)] +
-            [(t, n) for t, n in tower_alloc if isinstance(t, Stronghold)] +
-            [(t, n) for t, n in tower_alloc if isinstance(t, Satellite)]
+            [(t, n) for t, n in tower_alloc if isinstance(t, DefenseTower)]
+            + [(t, n) for t, n in tower_alloc if isinstance(t, Stronghold)]
+            + [(t, n) for t, n in tower_alloc if isinstance(t, Satellite)]
         )
         for tower, tower_tokens in ordered:
             lines.extend(_format_tower_attacks(tower, tower_tokens))

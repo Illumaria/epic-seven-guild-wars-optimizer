@@ -1,4 +1,14 @@
-def knapsack(tower_tables: list[list[tuple[int, str]]], budget: int) -> list[tuple[int, str]]:
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.models import Tower
+
+
+def knapsack(
+    tower_tables: list[list[tuple[int, str]]], budget: int
+) -> list[tuple[int, str]]:
     """
     Knapsack over a set of independent towers.
     Given a list of towers (each with a havoc table indexed by invested tokens),
@@ -15,6 +25,32 @@ def knapsack(tower_tables: list[list[tuple[int, str]]], budget: int) -> list[tup
                 val = dp[t - k][0] + table[k][0]
                 if val > new_dp[t][0]:
                     new_dp[t] = (val, table[k][1])
+        dp = new_dp
+    return dp
+
+
+def new_knapsack(
+    towers: list[Tower], max_tokens: int
+) -> list[tuple[int, Tower | None]]:
+    """
+    Knapsack over a set of independent towers.
+    Given a list of towers, return a list of towers ordered to attack
+    for maximum havoc earn.
+    """
+    dp: list[tuple[int, Tower | None]] = [(0, None) for _ in range(max_tokens + 1)]
+    for tower in towers:
+        new_dp: list[tuple[int, Tower | None]] = [
+            (0, None) for _ in range(max_tokens + 1)
+        ]
+        table = [tower.havoc(tokens=t) for t in range(max_tokens + 1)]
+        for t in range(max_tokens + 1):
+            # Don't allocate any tokens to this tower
+            new_dp[t] = dp[t]
+            # Allocate k tokens to this tower
+            for k in range(1, t + 1):
+                val = dp[t - k][0] + table[k]
+                if val > new_dp[t][0]:
+                    new_dp[t] = (val, tower)
         dp = new_dp
     return dp
 
