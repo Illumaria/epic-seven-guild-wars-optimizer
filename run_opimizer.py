@@ -16,11 +16,11 @@ MAX_DMG_PER_TOKEN: int = HAVOC_PER_WIN * MAX_WINS_PER_TOKEN  # 120
 def knapsack(tower_tables: list[list[tuple[int, str]]], budget: int) -> list[tuple[int, str]]:
     """
     Knapsack over a set of independent towers.
-    Given a list of towers (each with a havoc table indexed by tokens),
+    Given a list of towers (each with a havoc table indexed by invested tokens),
     return dp[t] = max havoc using exactly/up-to t tokens across all towers.
     """
     dp = [(0, "")] * (budget + 1)
-    for i, table in enumerate(tower_tables):
+    for table in tower_tables:
         new_dp = [(0, "")] * (budget + 1)
         for t in range(budget + 1):
             # Don't allocate any tokens to this tower
@@ -32,6 +32,41 @@ def knapsack(tower_tables: list[list[tuple[int, str]]], budget: int) -> list[tup
                     new_dp[t] = (val, table[k][1])
         dp = new_dp
     return dp
+
+
+def _knapsack_backtrack(
+    tower_tables: list[list[tuple[int, str]]], budget: int
+) -> tuple[list[tuple[int, str]], list[int]]:
+    """
+    Same as knapsack but also returns per-tower token allocation via backtracking.
+    Returns (dp_table, per_tower_token_counts).
+    """
+    n = len(tower_tables)
+    if n == 0:
+        return [(0, "")] * (budget + 1), []
+
+    dp = [(0, "")] * (budget + 1)
+    choices = [[0] * (budget + 1) for _ in range(n)]
+
+    for i, table in enumerate(tower_tables):
+        new_dp = [(0, "")] * (budget + 1)
+        for t in range(budget + 1):
+            new_dp[t] = dp[t]
+            choices[i][t] = 0
+            for k in range(1, t + 1):
+                val = dp[t - k][0] + table[k][0]
+                if val > new_dp[t][0]:
+                    new_dp[t] = (val, table[k][1])
+                    choices[i][t] = k
+        dp = new_dp
+
+    alloc = [0] * n
+    remaining = budget
+    for i in range(n - 1, -1, -1):
+        alloc[i] = choices[i][remaining]
+        remaining -= alloc[i]
+
+    return dp, alloc
 
 
 class Tower(BaseModel):
@@ -241,14 +276,69 @@ class Fortress(BaseModel):
             remaining_budget = max_tokens - min_defense_tower_tokens
             dp_others = knapsack(tower_tables=other_tables, budget=remaining_budget)
 
-            for t in range(max_tokens + 1):
-                if t < min_defense_tower_tokens:
-                    continue
+            for t in range(min_defense_tower_tokens, max_tokens + 1):
                 val, name = defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens][0], dp_others[t - min_defense_tower_tokens][1]
                 if val > best[t][0]:
                     best[t] = (val, name)
 
         return best
+
+    def resolve_allocation(self, tokens: int) -> list[tuple[Tower, int]]:
+        """
+        Given a token budget, return per-tower token allocation that maximizes havoc.
+        Mirrors the logic of dp() but with backtracking to recover the allocation.
+        Returns a list of (tower, tokens_allocated) pairs.
+        """
+        def make_table(tower: Tower) -> list[tuple[int, str]]:
+            return [(tower.havoc(k), str(tower)) for k in range(tokens + 1)]
+
+        sat_tables = [make_table(tower) for tower in self.satellites]
+        dt_tables = [make_table(tower) for tower in self.defense_towers]
+        sh_table = make_table(self.stronghold)
+
+        if self.is_stronghold_unlocked:
+            tower_list = self.satellites + self.defense_towers + [self.stronghold]
+            _, alloc = _knapsack_backtrack(sat_tables + dt_tables + [sh_table], tokens)
+            return list(zip(tower_list, alloc))
+
+        # Stronghold locked — sub-case A: skip stronghold entirely
+        no_sh_towers = self.satellites + self.defense_towers
+        dp_no_sh, alloc_no_sh = _knapsack_backtrack(sat_tables + dt_tables, tokens)
+
+        best_val = dp_no_sh[tokens][0]
+        best_alloc: list[tuple[Tower, int]] = list(zip(no_sh_towers, alloc_no_sh)) + [(self.stronghold, 0)]
+
+        # Sub-case B: try each defense tower as the stronghold unlocker
+        for j, dt in enumerate(self.defense_towers):
+            min_dt_tokens = dt.tokens_to_destroy
+            if min_dt_tokens > tokens:
+                continue
+
+            other_dt_list = [self.defense_towers[i] for i in range(len(self.defense_towers)) if i != j]
+            other_dt_tables = [dt_tables[i] for i in range(len(self.defense_towers)) if i != j]
+            other_tables = sat_tables + other_dt_tables + [sh_table]
+
+            remaining = tokens - min_dt_tokens
+            dp_others, alloc_others = _knapsack_backtrack(other_tables, remaining)
+
+            total_val = dt.havoc(min_dt_tokens) + dp_others[remaining][0]
+            if total_val > best_val:
+                best_val = total_val
+                new_alloc: list[tuple[Tower, int]] = []
+                for k in range(len(self.satellites)):
+                    new_alloc.append((self.satellites[k], alloc_others[k]))
+                other_dt_cursor = len(self.satellites)
+                for i in range(len(self.defense_towers)):
+                    if i == j:
+                        new_alloc.append((self.defense_towers[i], min_dt_tokens))
+                    else:
+                        new_alloc.append((self.defense_towers[i], alloc_others[other_dt_cursor]))
+                        other_dt_cursor += 1
+                sh_alloc = alloc_others[len(self.satellites) + len(other_dt_list)]
+                new_alloc.append((self.stronghold, sh_alloc))
+                best_alloc = new_alloc
+
+        return best_alloc
 
 
 class Guild(BaseModel):
@@ -329,11 +419,56 @@ class Guild(BaseModel):
             result_alloc[i] = alloc[i][remaining]
             remaining -= result_alloc[i]
 
-        print(f"{dp = }")
-        print(f"{alloc = }")
-        print(f"Attack order: {[x[1] for x in dp[:self.tokens_remaining]]}")
-
         return dp[self.tokens_remaining], result_alloc
+
+
+_TOWER_DISPLAY_NAMES: dict[type, str] = {
+    DefenseTower: "Defense tower",
+    Stronghold: "Stronghold",
+    Satellite: "Satellite",
+}
+
+
+def _format_tower_attacks(tower: Tower, tokens: int) -> list[str]:
+    """Format the sequence of attack lines for a single tower."""
+    if tokens == 0 or tower.hp <= 0:
+        return []
+    name = _TOWER_DISPLAY_NAMES.get(type(tower), tower.__class__.__name__)
+    lines = []
+    current_hp = tower.hp
+    for _ in range(tokens):
+        if current_hp <= 0:
+            break
+        hp_before = current_hp
+        damage = min(MAX_DMG_PER_TOKEN, current_hp)
+        current_hp -= damage
+        if current_hp <= 0:
+            lines.append(f"    {name} ({hp_before}/{tower.max_hp} HP) -> {tower.havoc_left} havoc (destroyed)")
+        else:
+            lines.append(f"    {name} ({hp_before}/{tower.max_hp} HP) -> {damage} havoc")
+    return lines
+
+
+def format_attack_order(guild: Guild) -> str:
+    """Format the optimal attack order across all fortresses."""
+    (max_havoc, _), per_fortress_alloc = guild.optimal_allocation()
+    lines: list[str] = []
+    for i, (fortress, tokens) in enumerate(zip(guild.fortresses, per_fortress_alloc)):
+        lines.append(f"Fortress {i + 1}:")
+        if tokens == 0:
+            lines.append("    (no attacks)")
+            continue
+        tower_alloc = fortress.resolve_allocation(tokens)
+        # Display: defense towers first, then stronghold, then satellites
+        ordered = (
+            [(t, n) for t, n in tower_alloc if isinstance(t, DefenseTower)] +
+            [(t, n) for t, n in tower_alloc if isinstance(t, Stronghold)] +
+            [(t, n) for t, n in tower_alloc if isinstance(t, Satellite)]
+        )
+        for tower, tower_tokens in ordered:
+            lines.extend(_format_tower_attacks(tower, tower_tokens))
+    lines.append(f"\nTotal: {max_havoc} havoc")
+    return "\n".join(lines)
 
 
 class Config(BaseModel):
@@ -351,7 +486,7 @@ def load_config(config_path: Path) -> Config:
 def main() -> None:
     config = load_config(config_path=Path("./config.yaml"))
 
-    print(config.guild_a.optimal_allocation())
+    print(format_attack_order(config.guild_a))
 
 
 if __name__ == "__main__":
