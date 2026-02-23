@@ -300,12 +300,12 @@ class Fortress(BaseModel):
 
         if self.is_stronghold_unlocked:
             tower_list = self.satellites + self.defense_towers + [self.stronghold]
-            _, alloc = _knapsack_backtrack(sat_tables + dt_tables + [sh_table], tokens)
+            _, alloc = knapsack_backtrack(sat_tables + dt_tables + [sh_table], tokens)
             return list(zip(tower_list, alloc))
 
         # Stronghold locked — sub-case A: skip stronghold entirely
         no_sh_towers = self.satellites + self.defense_towers
-        dp_no_sh, alloc_no_sh = _knapsack_backtrack(sat_tables + dt_tables, tokens)
+        dp_no_sh, alloc_no_sh = knapsack_backtrack(sat_tables + dt_tables, tokens)
 
         best_val = dp_no_sh[tokens][0]
         best_alloc: list[tuple[Tower, int]] = list(zip(no_sh_towers, alloc_no_sh)) + [
@@ -329,7 +329,7 @@ class Fortress(BaseModel):
             other_tables = sat_tables + other_dt_tables + [sh_table]
 
             remaining = tokens - min_dt_tokens
-            dp_others, alloc_others = _knapsack_backtrack(other_tables, remaining)
+            dp_others, alloc_others = knapsack_backtrack(other_tables, remaining)
 
             total_val = dt.havoc(min_dt_tokens) + dp_others[remaining][0]
             if total_val > best_val:

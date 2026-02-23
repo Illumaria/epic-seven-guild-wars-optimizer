@@ -15,7 +15,7 @@ def load_config(config_path: Path) -> Config:
 def main() -> None:
     config = load_config(config_path=Path("./config.yaml"))
 
-    print(config.guild_a.format_attack_order())
+    print(config.guild_b.format_attack_order())
 
 
 if __name__ == "__main__":
