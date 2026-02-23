@@ -189,7 +189,7 @@ class Fortress(BaseModel):
 
         return sorted_towers
 
-    def dp(self, max_tokens: int) -> list[tuple[int, str]]:
+    def dp(self, max_tokens: int) -> list[int]:
         """
         Compute the maximum havoc achievable from one fortress for each
         token budget from 0 to max_tokens.
@@ -210,21 +210,20 @@ class Fortress(BaseModel):
         """
         # ── Precompute per-tower havoc tables ──
         # satellite_havoc_matrix[i][t] = havoc from allocating t tokens to satellite i
-        satellite_havoc_matrix: list[list[tuple[int, str]]] = []
+        satellite_havoc_matrix: list[list[int]] = []
         for _, tower in enumerate(self.satellites):
-            row = [(tower.havoc(tokens=t), str(tower)) for t in range(max_tokens + 1)]
+            row = [tower.havoc(tokens=t) for t in range(max_tokens + 1)]
             satellite_havoc_matrix.append(row)
 
         # defense_tower_havoc_matrix[i][t] = havoc from allocating t tokens to defense tower i
-        defense_tower_havoc_matrix: list[list[tuple[int, str]]] = []
+        defense_tower_havoc_matrix: list[list[int]] = []
         for _, tower in enumerate(self.defense_towers):
-            row = [(tower.havoc(tokens=t), str(tower)) for t in range(max_tokens + 1)]
+            row = [tower.havoc(tokens=t) for t in range(max_tokens + 1)]
             defense_tower_havoc_matrix.append(row)
 
         # stronghold_havoc_vector[t] = havoc from allocating t tokens to stronghold
-        stronghold_havoc_vector: list[tuple[int, str]] = [
-            (self.stronghold.havoc(tokens=t), str(self.stronghold))
-            for t in range(max_tokens + 1)
+        stronghold_havoc_vector: list[int] = [
+            self.stronghold.havoc(tokens=t) for t in range(max_tokens + 1)
         ]
 
         # ── Case 1: Stronghold already unlocked ──
@@ -262,7 +261,7 @@ class Fortress(BaseModel):
 
             defense_tower_j_havoc = defense_tower_havoc_matrix[j][
                 min_defense_tower_tokens
-            ][0]  # havoc from destroying defense tower j
+            ]  # havoc from destroying defense tower j
 
             # Remaining towers: satellites + other defense towers (not j) + stronghold
             other_tables = list(satellite_havoc_matrix)
@@ -275,12 +274,9 @@ class Fortress(BaseModel):
             dp_others = knapsack(tower_tables=other_tables, budget=remaining_budget)
 
             for t in range(min_defense_tower_tokens, max_tokens + 1):
-                val, name = (
-                    defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens][0],
-                    dp_others[t - min_defense_tower_tokens][1],
-                )
-                if val > best[t][0]:
-                    best[t] = (val, name)
+                val = defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens]
+                if val > best[t]:
+                    best[t] = val
 
         return best
 
@@ -403,37 +399,34 @@ class Guild(BaseModel):
             )
         )
 
-    def optimal_allocation(self) -> tuple[tuple[int, str], list[int]]:
+    def optimal_allocation(self) -> tuple[int, list[int]]:
         """
         Distribute tokens across fortresses to maximize total havoc.
 
         Returns (max_havoc, per_fortress_token_allocation).
         """
         # Compute per-fortress DP tables
-        fort_dps: list[list[tuple[int, str]]] = []
+        fort_dps: list[list[int]] = []
         for fortress in self.fortresses:
             dp = fortress.dp(max_tokens=self.tokens_remaining)
             fort_dps.append(dp)
 
         # Cross-fortress knapsack
-        dp: list[tuple[int, str]] = [(0, "")] * (self.tokens_remaining + 1)
+        dp: list[int] = [0] * (self.tokens_remaining + 1)
         # For backtracking allocations
         alloc: list[list[int]] = [
             [0] * (self.tokens_remaining + 1) for _ in enumerate(self.fortresses)
         ]
 
         for i, _ in enumerate(self.fortresses):
-            new_dp = [(0, "")] * (self.tokens_remaining + 1)
+            new_dp = [0] * (self.tokens_remaining + 1)
             for t in range(self.tokens_remaining + 1):
                 new_dp[t] = dp[t]  # allocate 0 to fortress i
                 alloc[i][t] = 0
                 for k in range(1, t + 1):
-                    val, name = (
-                        dp[t - k][0] + fort_dps[i][k][0],
-                        f"Fortress {i}: {fort_dps[i][k][1]}",
-                    )
-                    if val > new_dp[t][0]:
-                        new_dp[t] = (val, name)
+                    val = dp[t - k] + fort_dps[i][k]
+                    if val > new_dp[t]:
+                        new_dp[t] = val
                         alloc[i][t] = k
             dp = new_dp
 
@@ -448,7 +441,7 @@ class Guild(BaseModel):
 
     def format_attack_order(self) -> str:
         """Format the optimal attack order across all fortresses."""
-        (max_havoc, _), per_fortress_alloc = self.optimal_allocation()
+        max_havoc, per_fortress_alloc = self.optimal_allocation()
         lines: list[str] = []
         for i, (fortress, tokens) in enumerate(
             zip(self.fortresses, per_fortress_alloc)

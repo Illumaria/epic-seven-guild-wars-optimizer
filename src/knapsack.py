@@ -6,25 +6,23 @@ if TYPE_CHECKING:
     from src.models import Tower
 
 
-def knapsack(
-    tower_tables: list[list[tuple[int, str]]], budget: int
-) -> list[tuple[int, str]]:
+def knapsack(tower_tables: list[list[int]], budget: int) -> list[int]:
     """
     Knapsack over a set of independent towers.
     Given a list of towers (each with a havoc table indexed by invested tokens),
     return dp[t] = max havoc using exactly/up-to t tokens across all towers.
     """
-    dp = [(0, "")] * (budget + 1)
+    dp = [0] * (budget + 1)
     for table in tower_tables:
-        new_dp = [(0, "")] * (budget + 1)
+        new_dp = [0] * (budget + 1)
         for t in range(budget + 1):
             # Don't allocate any tokens to this tower
             new_dp[t] = dp[t]
             # Allocate k tokens to this tower
             for k in range(1, t + 1):
-                val = dp[t - k][0] + table[k][0]
-                if val > new_dp[t][0]:
-                    new_dp[t] = (val, table[k][1])
+                val = dp[t - k] + table[k]
+                if val > new_dp[t]:
+                    new_dp[t] = val
         dp = new_dp
     return dp
 

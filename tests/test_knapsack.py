@@ -10,45 +10,45 @@ from src.models import Tower
         [
             [
                 [
-                    (0, "Satellite 1"),
-                    (120, "Satellite 1"),
-                    (300, "Satellite 1"),
+                    0,
+                    120,
+                    300,
                 ],  # 200 HP
                 [
-                    (0, "Satellite 2"),
-                    (120, "Satellite 2"),
-                    (300, "Satellite 2"),
+                    0,
+                    120,
+                    300,
                 ],  # 200 HP
             ],
             2,
-            [(0, ""), (120, "Satellite 1"), (300, "Satellite 1")],
+            [0, 120, 300],
         ],
         [
             [
                 [
-                    (0, "Satellite 1"),
-                    (120, "Satellite 1"),
-                    (300, "Satellite 1"),
+                    0,
+                    120,
+                    300,
                 ],  # 200 HP
                 [
-                    (0, "DefenseTower 2"),
-                    (120 + 250, "DefenseTower 2"),
-                    (120 + 250, "DefenseTower 2"),
+                    0,
+                    120 + 250,
+                    120 + 250,
                 ],  # 120 HP
             ],
             2,
             [
-                (0, ""),
-                (120 + 250, "DefenseTower 2"),
-                (120 + 120 + 250, "DefenseTower 2"),
+                0,
+                120 + 250,
+                120 + 120 + 250,
             ],
         ],
     ],
 )
 def test_knapsack_works_correctly(
-    tower_tables: list[list[tuple[int, str]]],
+    tower_tables: list[list[int]],
     budget: int,
-    expected_result: list[tuple[int, str]],
+    expected_result: list[int],
 ) -> None:
     actual_result = knapsack(tower_tables=tower_tables, budget=budget)
 
