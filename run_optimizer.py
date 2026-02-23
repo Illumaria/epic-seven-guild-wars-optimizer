@@ -55,7 +55,7 @@ def format_attack_order(guild: Guild) -> str:
         )
         for tower, tower_tokens in ordered:
             lines.extend(_format_tower_attacks(tower, tower_tokens))
-    lines.append(f"\nTotal: {max_havoc} havoc")
+    lines.append(f"\nTotal: {guild.current_havoc + max_havoc} havoc")
     return "\n".join(lines)
 
 
