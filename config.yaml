@@ -1,0 +1,39 @@
+guild_a:
+  # current guild
+  name: Monolith
+  current_havoc: 0
+  tokens_remaining: 5
+  # opposing guild
+  max_stronghold_hp: 840
+  max_defense_tower_hp: 480
+  max_satellite_hp: 200
+  fortresses:
+    - stronghold: {}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{hp: 140}]
+    - stronghold: {}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{hp: 80}]
+    - stronghold: {hp: 360}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{}, {}]
+
+guild_b:
+  # current guild
+  name: Not Monolith
+  current_havoc: 0
+  tokens_remaining: 81
+  # opposing guild
+  max_stronghold_hp: 800
+  max_defense_tower_hp: 450
+  max_satellite_hp: 200
+  fortresses:
+    - stronghold: {hp: 0}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{}]
+    - stronghold: {}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{}]
+    - stronghold: {}
+      defense_towers: [{hp: 0}, {hp: 0}]
+      satellites: [{}, {}]
