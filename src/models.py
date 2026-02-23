@@ -81,6 +81,28 @@ class Tower(BaseModel):
             return self.havoc_left
         return damage  # partial damage, no bonus
 
+    def format_attacks(self, tokens: int) -> list[str]:
+        """Format the sequence of attack lines for a single tower."""
+        if tokens <= 0 or self.hp <= 0:
+            return []
+
+        lines = []
+        current_hp = self.hp
+        for _ in range(tokens):
+            if current_hp <= 0:
+                break
+            hp_before = current_hp
+            current_hp -= MAX_DMG_PER_TOKEN
+            if current_hp <= 0:
+                lines.append(
+                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {self.havoc_left} havoc (destroyed)"
+                )
+            else:
+                lines.append(
+                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {MAX_DMG_PER_TOKEN} havoc"
+                )
+        return lines
+
 
 class Satellite(Tower):
     max_havoc: Annotated[PositiveInt, Field(default=300)]
@@ -423,6 +445,29 @@ class Guild(BaseModel):
             remaining -= result_alloc[i]
 
         return dp[self.tokens_remaining], result_alloc
+
+    def format_attack_order(self) -> str:
+        """Format the optimal attack order across all fortresses."""
+        (max_havoc, _), per_fortress_alloc = self.optimal_allocation()
+        lines: list[str] = []
+        for i, (fortress, tokens) in enumerate(
+            zip(self.fortresses, per_fortress_alloc)
+        ):
+            lines.append(f"Fortress {i + 1}:")
+            if tokens == 0:
+                lines.append("    (no attacks)")
+                continue
+            tower_alloc = fortress.resolve_allocation(tokens)
+            # Display: defense towers first, then stronghold, then satellites
+            ordered = (
+                [(t, n) for t, n in tower_alloc if isinstance(t, DefenseTower)]
+                + [(t, n) for t, n in tower_alloc if isinstance(t, Stronghold)]
+                + [(t, n) for t, n in tower_alloc if isinstance(t, Satellite)]
+            )
+            for tower, tower_tokens in ordered:
+                lines.extend(tower.format_attacks(tokens=tower_tokens))
+        lines.append(f"\nTotal: {self.current_havoc + max_havoc} havoc")
+        return "\n".join(lines)
 
 
 class Config(BaseModel):
