@@ -29,6 +29,11 @@ def defense_tower_90_hp() -> DefenseTower:
 
 
 @pytest.fixture
+def defense_tower_0_hp() -> DefenseTower:
+    return DefenseTower(max_hp=450, hp=0)
+
+
+@pytest.fixture
 def stronghold_800_hp() -> Stronghold:
     return Stronghold(max_hp=800, hp=800)
 
