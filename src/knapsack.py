@@ -32,6 +32,15 @@ def new_knapsack(
     return dp
 
 
+def backtrack(choices: list[list[int]], budget: int) -> list[int]:
+    alloc = [0] * len(choices)
+    remaining = budget
+    for i in range(len(choices) - 1, -1, -1):
+        alloc[i] = choices[i][remaining]
+        remaining -= alloc[i]
+    return alloc
+
+
 def knapsack_backtrack(
     tower_tables: list[list[int]], budget: int
 ) -> tuple[list[int], list[int]]:
@@ -44,7 +53,7 @@ def knapsack_backtrack(
     where dp_vector[t] = max havoc using exactly/up-to t tokens across all towers.
     """
     dp = [0] * (budget + 1)
-    choices = [[0] * (budget + 1) for _ in enumerate(tower_tables)]
+    choices: list[list[int]] = [[0] * (budget + 1) for _ in enumerate(tower_tables)]
 
     for i, table in enumerate(tower_tables):
         new_dp = [0] * (budget + 1)
@@ -60,10 +69,6 @@ def knapsack_backtrack(
                     choices[i][t] = k
         dp = new_dp
 
-    alloc = [0] * len(tower_tables)
-    remaining = budget
-    for i in range(len(tower_tables) - 1, -1, -1):
-        alloc[i] = choices[i][remaining]
-        remaining -= alloc[i]
+    alloc = backtrack(choices=choices, budget=budget)
 
     return dp, alloc
