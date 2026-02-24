@@ -125,7 +125,7 @@ class Fortress(BaseModel):
 
         return table.get_string()
 
-    def dp(self, max_tokens: int) -> list[int]:
+    def max_havoc_per_tokens_invested(self, max_tokens: int) -> list[int]:
         """
         Compute the maximum havoc achievable from one fortress for each
         token budget from 0 to max_tokens.
@@ -223,7 +223,7 @@ class Fortress(BaseModel):
 
         return best
 
-    def resolve_allocation(self, max_tokens: int) -> list[tuple[Tower, int]]:
+    def per_tower_token_allocation(self, max_tokens: int) -> list[tuple[Tower, int]]:
         """
         Given a token budget, return per-tower token allocation that maximizes havoc.
         Mirrors the logic of dp() but with backtracking to recover the allocation.
@@ -334,7 +334,8 @@ class Fortress(BaseModel):
         self, max_tokens: int
     ) -> tuple[list[int], list[tuple[Tower, int]]]:
         """
-        TODO: combine docstrings from dp() and resolve_allocation() properly.
+        TODO: combine docstrings from max_havoc_per_tokens_invested()
+        and per_tower_token_allocation() properly.
         Returns:
             dp: a list where `dp[t]` = max havoc with `t` tokens.
             alloc: a list of (tower, tokens_allocated) pairs.
@@ -457,7 +458,7 @@ class Guild(BaseModel):
         """
         # Compute per-fortress DP tables
         per_fortress_dp: list[list[int]] = [
-            fortress.dp(max_tokens=self.tokens_remaining)
+            fortress.max_havoc_per_tokens_invested(max_tokens=self.tokens_remaining)
             for fortress in self.fortresses
         ]
 
@@ -479,7 +480,7 @@ class Guild(BaseModel):
             if tokens == 0:
                 lines.append("    (no attacks)")
                 continue
-            tower_alloc = fortress.resolve_allocation(tokens)
+            tower_alloc = fortress.per_tower_token_allocation(max_tokens=tokens)
             # Display: defense towers first, then stronghold, then satellites
             ordered = (
                 [(t, n) for t, n in tower_alloc if isinstance(t, DefenseTower)]

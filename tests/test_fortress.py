@@ -1,7 +1,7 @@
 from src.models import DefenseTower, Fortress, Satellite, Stronghold, Tower
 
 
-def test_fortress_with_locked_stronghold_resolve_allocation(
+def test_fortress_with_locked_stronghold_per_tower_token_allocation(
     defense_tower_90_hp: DefenseTower,
     defense_tower_330_hp: DefenseTower,
     satellite_80_hp: Satellite,
@@ -29,11 +29,13 @@ def test_fortress_with_locked_stronghold_resolve_allocation(
         (defense_tower_330_hp, 0),
         (stronghold_800_hp, 0),
     ]
-    actual_result: list[tuple[Tower, int]] = fortress.resolve_allocation(max_tokens=3)
+    actual_result: list[tuple[Tower, int]] = fortress.per_tower_token_allocation(
+        max_tokens=3
+    )
     assert actual_result == expected_result
 
 
-def test_fortress_with_unlocked_stronghold_resolve_allocation(
+def test_fortress_with_unlocked_stronghold_per_tower_token_allocation(
     defense_tower_0_hp: DefenseTower,
     defense_tower_330_hp: DefenseTower,
     satellite_80_hp: Satellite,
@@ -61,5 +63,7 @@ def test_fortress_with_unlocked_stronghold_resolve_allocation(
         (defense_tower_330_hp, 3),
         (stronghold_800_hp, 0),
     ]
-    actual_result: list[tuple[Tower, int]] = fortress.resolve_allocation(max_tokens=3)
+    actual_result: list[tuple[Tower, int]] = fortress.per_tower_token_allocation(
+        max_tokens=3
+    )
     assert actual_result == expected_result

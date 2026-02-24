@@ -32,6 +32,37 @@ def new_knapsack(
     return dp
 
 
+def knapsack(
+    tower_tables: list[list[int]], budget: int
+) -> tuple[list[int], list[list[int]]]:
+    """
+    Knapsack over a set of independent towers.
+
+    Given a list of towers (each as a havoc table indexed by tokens invested),
+    returns (dp_vector, choices),
+    where dp_vector[t] = max havoc using exactly/up-to t tokens across all towers,
+          choices — per-tower token allocation matrix.
+    """
+    dp: list[int] = [0] * (budget + 1)
+    choices: list[list[int]] = [[0] * (budget + 1) for _ in enumerate(tower_tables)]
+
+    for i, table in enumerate(tower_tables):
+        new_dp: list[int] = [0] * (budget + 1)
+        for t in range(budget + 1):
+            # Don't allocate any tokens to this tower
+            new_dp[t] = dp[t]
+            choices[i][t] = 0
+            # Allocate k tokens to this tower
+            for k in range(1, t + 1):
+                val = dp[t - k] + table[k]
+                if val > new_dp[t]:
+                    new_dp[t] = val
+                    choices[i][t] = k
+        dp = new_dp
+
+    return dp, choices
+
+
 def backtrack(choices: list[list[int]], budget: int) -> list[int]:
     alloc: list[int] = [0] * len(choices)
     remaining: int = budget
@@ -52,22 +83,7 @@ def knapsack_backtrack(
     returns (dp_vector, per_tower_token_counts_matrix),
     where dp_vector[t] = max havoc using exactly/up-to t tokens across all towers.
     """
-    dp: list[int] = [0] * (budget + 1)
-    choices: list[list[int]] = [[0] * (budget + 1) for _ in enumerate(tower_tables)]
-
-    for i, table in enumerate(tower_tables):
-        new_dp: list[int] = [0] * (budget + 1)
-        for t in range(budget + 1):
-            # Don't allocate any tokens to this tower
-            new_dp[t] = dp[t]
-            choices[i][t] = 0
-            # Allocate k tokens to this tower
-            for k in range(1, t + 1):
-                val = dp[t - k] + table[k]
-                if val > new_dp[t]:
-                    new_dp[t] = val
-                    choices[i][t] = k
-        dp = new_dp
+    dp, choices = knapsack(tower_tables=tower_tables, budget=budget)
 
     alloc: list[int] = backtrack(choices=choices, budget=budget)
 
