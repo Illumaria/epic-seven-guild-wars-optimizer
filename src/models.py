@@ -24,7 +24,6 @@ class Tower(BaseModel):
     wins_to_destroy: Annotated[NonNegativeInt, Field(default=None, init=False)]
     tokens_to_destroy: Annotated[NonNegativeInt, Field(default=None, init=False)]
     havoc_left: Annotated[NonNegativeInt, Field(default=None, init=False)]
-    havoc_left_per_token: Annotated[NonNegativeFloat, Field(default=None, init=False)]
 
     def model_post_init(self, context: Any) -> None:
         if self.hp is None:
@@ -33,11 +32,6 @@ class Tower(BaseModel):
         self.wins_to_destroy = ceil(self.hp / HAVOC_PER_WIN)
         self.tokens_to_destroy = ceil(self.wins_to_destroy / MAX_WINS_PER_TOKEN)
         self.havoc_left = self.max_havoc - self.max_hp + self.hp
-        self.havoc_left_per_token = (
-            self.havoc_left / self.tokens_to_destroy
-            if self.tokens_to_destroy > 0
-            else 0
-        )
 
     def is_stronghold(self) -> bool:
         return isinstance(self, Stronghold)
@@ -48,7 +42,6 @@ class Tower(BaseModel):
             f"{self.hp}/{self.max_hp}",
             f"{self.havoc_left}/{self.max_havoc}",
             f"{self.wins_to_destroy}/{self.tokens_to_destroy}",
-            f"{self.havoc_left_per_token:.1f}",
         ]
 
     def __str__(self) -> str:
@@ -56,8 +49,7 @@ class Tower(BaseModel):
         # return (
         #     f"HP: {self.hp}/{self.max_hp}, "
         #     f"havoc: {self.havoc_left}/{self.max_havoc}, "
-        #     f"wins/tokens to destroy: {self.wins_to_destroy}/{self.tokens_to_destroy}, "
-        #     f"havoc left per token: {self.havoc_left_per_token:.1f}"
+        #     f"wins/tokens to destroy: {self.wins_to_destroy}/{self.tokens_to_destroy}"
         # )
 
     def __repr__(self) -> str:
@@ -138,7 +130,6 @@ class Fortress(BaseModel):
             "HP",
             "Havoc",
             "Wins/tokens to destroy",
-            "Havoc left per token",
         ]
 
         table.add_row(row=self.stronghold.row, divider=True)
