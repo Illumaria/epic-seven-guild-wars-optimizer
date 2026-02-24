@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 from src.constants import HAVOC_PER_WIN, MAX_DMG_PER_TOKEN, MAX_WINS_PER_TOKEN
-from src.knapsack import knapsack_backtrack, knapsack
+from src.knapsack import knapsack_backtrack
 
 
 class Tower(BaseModel):
@@ -234,7 +234,7 @@ class Fortress(BaseModel):
                 + defense_tower_havoc_matrix
                 + [stronghold_havoc_vector]
             )
-            dp = knapsack(all_tables, max_tokens)
+            dp, _ = knapsack_backtrack(all_tables, max_tokens)
             return dp
 
         # ── Case 2: Stronghold locked ──
@@ -247,7 +247,7 @@ class Fortress(BaseModel):
 
         # Sub-case A: no stronghold, all towers independent
         no_stronghold_tables = satellite_havoc_matrix + defense_tower_havoc_matrix
-        dp_no_stronghold = knapsack(
+        dp_no_stronghold, _ = knapsack_backtrack(
             tower_tables=no_stronghold_tables, budget=max_tokens
         )
 
@@ -271,7 +271,9 @@ class Fortress(BaseModel):
             other_tables.append(stronghold_havoc_vector)
 
             remaining_budget = max_tokens - min_defense_tower_tokens
-            dp_others = knapsack(tower_tables=other_tables, budget=remaining_budget)
+            dp_others, _ = knapsack_backtrack(
+                tower_tables=other_tables, budget=remaining_budget
+            )
 
             for t in range(min_defense_tower_tokens, max_tokens + 1):
                 val = defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens]
