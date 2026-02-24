@@ -478,33 +478,12 @@ class Guild(BaseModel):
             for fortress in self.fortresses
         ]
 
-        # Cross-fortress knapsack
-        cross_fortress_dp: list[int] = [0] * (self.tokens_remaining + 1)
-        # For backtracking allocations
-        cross_fortress_alloc: list[list[int]] = [
-            [0] * (self.tokens_remaining + 1) for _ in enumerate(self.fortresses)
-        ]
-
-        for i, _ in enumerate(self.fortresses):
-            new_cross_fortress_dp = [0] * (self.tokens_remaining + 1)
-            for t in range(self.tokens_remaining + 1):
-                new_cross_fortress_dp[t] = cross_fortress_dp[
-                    t
-                ]  # allocate 0 to fortress i
-                cross_fortress_alloc[i][t] = 0
-                for k in range(1, t + 1):
-                    val = cross_fortress_dp[t - k] + per_fortress_dp[i][k]
-                    if val > new_cross_fortress_dp[t]:
-                        new_cross_fortress_dp[t] = val
-                        cross_fortress_alloc[i][t] = k
-            cross_fortress_dp = new_cross_fortress_dp
-
-        # Backtrack to find per-fortress allocation
-        result_alloc = backtrack(
-            choices=cross_fortress_alloc, budget=self.tokens_remaining
+        # Compute cross-fortress DP tables
+        cross_fortress_dp, cross_fortress_alloc = knapsack_backtrack(
+            tower_tables=per_fortress_dp, budget=self.tokens_remaining
         )
 
-        return cross_fortress_dp[self.tokens_remaining], result_alloc
+        return cross_fortress_dp[self.tokens_remaining], cross_fortress_alloc
 
     def format_attack_order(self) -> str:
         """Format the optimal attack order across all fortresses."""
