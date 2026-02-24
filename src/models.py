@@ -287,8 +287,8 @@ class Fortress(BaseModel):
         Returns a list of (tower, tokens_allocated) pairs.
         """
 
-        def make_table(tower: Tower) -> list[tuple[int, str]]:
-            return [(tower.havoc(k), str(tower)) for k in range(tokens + 1)]
+        def make_table(tower: Tower) -> list[int]:
+            return [tower.havoc(k) for k in range(tokens + 1)]
 
         sat_tables = [make_table(tower) for tower in self.satellites]
         dt_tables = [make_table(tower) for tower in self.defense_towers]
@@ -303,7 +303,7 @@ class Fortress(BaseModel):
         no_sh_towers = self.satellites + self.defense_towers
         dp_no_sh, alloc_no_sh = knapsack_backtrack(sat_tables + dt_tables, tokens)
 
-        best_val = dp_no_sh[tokens][0]
+        best_val = dp_no_sh[tokens]
         best_alloc: list[tuple[Tower, int]] = list(zip(no_sh_towers, alloc_no_sh)) + [
             (self.stronghold, 0)
         ]
@@ -327,7 +327,7 @@ class Fortress(BaseModel):
             remaining = tokens - min_dt_tokens
             dp_others, alloc_others = knapsack_backtrack(other_tables, remaining)
 
-            total_val = dt.havoc(min_dt_tokens) + dp_others[remaining][0]
+            total_val = dt.havoc(min_dt_tokens) + dp_others[remaining]
             if total_val > best_val:
                 best_val = total_val
                 new_alloc: list[tuple[Tower, int]] = []
@@ -399,49 +399,51 @@ class Guild(BaseModel):
             )
         )
 
-    def optimal_allocation(self) -> tuple[int, list[int]]:
+    def allocate_remaining_tokens(self) -> tuple[int, list[int]]:
         """
-        Distribute tokens across fortresses to maximize total havoc.
+        Distribute remaining tokens across fortresses to maximize total havoc.
 
         Returns (max_havoc, per_fortress_token_allocation).
         """
         # Compute per-fortress DP tables
-        fort_dps: list[list[int]] = []
-        for fortress in self.fortresses:
-            dp = fortress.dp(max_tokens=self.tokens_remaining)
-            fort_dps.append(dp)
+        per_fortress_dp: list[list[int]] = [
+            fortress.dp(max_tokens=self.tokens_remaining)
+            for fortress in self.fortresses
+        ]
 
         # Cross-fortress knapsack
-        dp: list[int] = [0] * (self.tokens_remaining + 1)
+        cross_fortress_dp: list[int] = [0] * (self.tokens_remaining + 1)
         # For backtracking allocations
-        alloc: list[list[int]] = [
+        cross_fortress_alloc: list[list[int]] = [
             [0] * (self.tokens_remaining + 1) for _ in enumerate(self.fortresses)
         ]
 
         for i, _ in enumerate(self.fortresses):
-            new_dp = [0] * (self.tokens_remaining + 1)
+            new_cross_fortress_dp = [0] * (self.tokens_remaining + 1)
             for t in range(self.tokens_remaining + 1):
-                new_dp[t] = dp[t]  # allocate 0 to fortress i
-                alloc[i][t] = 0
+                new_cross_fortress_dp[t] = cross_fortress_dp[
+                    t
+                ]  # allocate 0 to fortress i
+                cross_fortress_alloc[i][t] = 0
                 for k in range(1, t + 1):
-                    val = dp[t - k] + fort_dps[i][k]
-                    if val > new_dp[t]:
-                        new_dp[t] = val
-                        alloc[i][t] = k
-            dp = new_dp
+                    val = cross_fortress_dp[t - k] + per_fortress_dp[i][k]
+                    if val > new_cross_fortress_dp[t]:
+                        new_cross_fortress_dp[t] = val
+                        cross_fortress_alloc[i][t] = k
+            cross_fortress_dp = new_cross_fortress_dp
 
         # Backtrack to find per-fortress allocation
         result_alloc = [0] * len(self.fortresses)
         remaining = self.tokens_remaining
         for i in range(len(self.fortresses) - 1, -1, -1):
-            result_alloc[i] = alloc[i][remaining]
+            result_alloc[i] = cross_fortress_alloc[i][remaining]
             remaining -= result_alloc[i]
 
-        return dp[self.tokens_remaining], result_alloc
+        return cross_fortress_dp[self.tokens_remaining], result_alloc
 
     def format_attack_order(self) -> str:
         """Format the optimal attack order across all fortresses."""
-        max_havoc, per_fortress_alloc = self.optimal_allocation()
+        max_havoc, per_fortress_alloc = self.allocate_remaining_tokens()
         lines: list[str] = []
         for i, (fortress, tokens) in enumerate(
             zip(self.fortresses, per_fortress_alloc)

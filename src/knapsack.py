@@ -54,28 +54,28 @@ def new_knapsack(
 
 
 def knapsack_backtrack(
-    tower_tables: list[list[tuple[int, str]]], budget: int
-) -> tuple[list[tuple[int, str]], list[int]]:
+    tower_tables: list[list[int]], budget: int
+) -> tuple[list[int], list[int]]:
     """
     Same as knapsack but also returns per-tower token allocation via backtracking.
     Returns (dp_table, per_tower_token_counts).
     """
     n = len(tower_tables)
     if n == 0:
-        return [(0, "")] * (budget + 1), []
+        return [0] * (budget + 1), []
 
-    dp = [(0, "")] * (budget + 1)
+    dp = [0] * (budget + 1)
     choices = [[0] * (budget + 1) for _ in range(n)]
 
     for i, table in enumerate(tower_tables):
-        new_dp = [(0, "")] * (budget + 1)
+        new_dp = [0] * (budget + 1)
         for t in range(budget + 1):
             new_dp[t] = dp[t]
             choices[i][t] = 0
             for k in range(1, t + 1):
-                val = dp[t - k][0] + table[k][0]
-                if val > new_dp[t][0]:
-                    new_dp[t] = (val, table[k][1])
+                val = dp[t - k] + table[k]
+                if val > new_dp[t]:
+                    new_dp[t] = val
                     choices[i][t] = k
         dp = new_dp
 
