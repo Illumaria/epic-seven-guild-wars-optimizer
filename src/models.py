@@ -17,8 +17,6 @@ from src.knapsack import backtrack, knapsack_backtrack
 
 
 class Tower(BaseModel):
-    separator: Annotated[str, Field(default="", repr=False, exclude=True)]
-
     max_hp: PositiveInt
     max_havoc: PositiveInt
     hp: Annotated[NonNegativeInt, Field(default=None)]
@@ -56,7 +54,7 @@ class Tower(BaseModel):
     def __str__(self) -> str:
         return f"{self.__class__.__name__} ({self.hp}/{self.max_hp} HP)"
         # return (
-        #     f"{self.separator} HP: {self.hp}/{self.max_hp}, "
+        #     f"HP: {self.hp}/{self.max_hp}, "
         #     f"havoc: {self.havoc_left}/{self.max_havoc}, "
         #     f"wins/tokens to destroy: {self.wins_to_destroy}/{self.tokens_to_destroy}, "
         #     f"havoc left per token: {self.havoc_left_per_token:.1f}"
@@ -105,17 +103,14 @@ class Tower(BaseModel):
 
 class Satellite(Tower):
     max_havoc: Annotated[PositiveInt, Field(default=300)]
-    separator: str = "---"
 
 
 class DefenseTower(Tower):
     max_havoc: Annotated[PositiveInt, Field(default=700)]
-    separator: str = "--"
 
 
 class Stronghold(Tower):
     max_havoc: Annotated[PositiveInt, Field(default=1300)]
-    separator: str = "-"
 
 
 class Fortress(BaseModel):
