@@ -6,13 +6,12 @@ from pydantic import (
     BaseModel,
     Field,
     NonNegativeInt,
-    NonNegativeFloat,
     PositiveInt,
     field_validator,
     ValidationInfo,
 )
 
-from src.constants import HAVOC_PER_WIN, MAX_DMG_PER_TOKEN, MAX_WINS_PER_TOKEN
+from src.constants import MAX_DMG_PER_TOKEN
 from src.knapsack import backtrack, knapsack_backtrack
 
 
@@ -28,7 +27,7 @@ class Tower(BaseModel):
         if self.hp is None:
             self.hp = self.max_hp
 
-        self.tokens_to_destroy = ceil(self.hp / (HAVOC_PER_WIN * MAX_WINS_PER_TOKEN))
+        self.tokens_to_destroy = ceil(self.hp / MAX_DMG_PER_TOKEN)
         self.havoc_left = self.max_havoc - self.max_hp + self.hp
 
     def is_stronghold(self) -> bool:
