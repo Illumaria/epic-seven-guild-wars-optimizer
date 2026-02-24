@@ -215,17 +215,13 @@ class Fortress(BaseModel):
             budget=max_tokens,
         )
 
-        best = list(dp_no_stronghold)
+        best: list[int] = dp_no_stronghold
 
         # Sub-case B: try each defense tower as the stronghold unlocker
         for j, defense_tower in enumerate(self.defense_towers):
             min_defense_tower_tokens = defense_tower.tokens_to_destroy
             if min_defense_tower_tokens > max_tokens:
                 continue  # can't even destroy this defense tower
-
-            defense_tower_j_havoc = defense_tower_havoc_matrix[j][
-                min_defense_tower_tokens
-            ]  # havoc from destroying defense tower j
 
             # Remaining towers: satellites + other defense towers (not j) + stronghold
             other_defense_tower_matrix = [
@@ -243,6 +239,10 @@ class Fortress(BaseModel):
             dp_others, _ = knapsack_backtrack(
                 tower_tables=other_tables, budget=remaining_budget
             )
+
+            defense_tower_j_havoc = defense_tower_havoc_matrix[j][
+                min_defense_tower_tokens
+            ]  # havoc from destroying defense tower j
 
             for t in range(min_defense_tower_tokens, max_tokens + 1):
                 val = defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens]
@@ -278,14 +278,15 @@ class Fortress(BaseModel):
         # ── Case 1: Stronghold already unlocked ──
         # All towers are independent; just knapsack over everything.
         if self.is_stronghold_unlocked:
-            tower_list = self.satellites + self.defense_towers + [self.stronghold]
             _, alloc = knapsack_backtrack(
                 tower_tables=satellite_havoc_matrix
                 + defense_tower_havoc_matrix
                 + [stronghold_havoc_vector],
                 budget=max_tokens,
             )
-            return list(zip(tower_list, alloc))
+            return list(
+                zip(self.satellites + self.defense_towers + [self.stronghold], alloc)
+            )
 
         # ── Case 2: Stronghold locked ──
         # We consider two sub-cases:
@@ -296,15 +297,14 @@ class Fortress(BaseModel):
         # tokens. The remaining tokens are distributed among stronghold + other towers.
 
         # Sub-case A: skip stronghold entirely
-        no_stronghold_towers = self.satellites + self.defense_towers
         dp_no_stronghold, alloc_no_stronghold = knapsack_backtrack(
             tower_tables=satellite_havoc_matrix + defense_tower_havoc_matrix,
             budget=max_tokens,
         )
 
-        best_val = dp_no_stronghold[max_tokens]
+        best_val: int = dp_no_stronghold[max_tokens]
         best_alloc: list[tuple[Tower, int]] = list(
-            zip(no_stronghold_towers, alloc_no_stronghold)
+            zip(self.satellites + self.defense_towers, alloc_no_stronghold)
         ) + [(self.stronghold, 0)]
 
         # Sub-case B: try each defense tower as the stronghold unlocker
