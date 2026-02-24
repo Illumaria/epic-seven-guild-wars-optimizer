@@ -111,16 +111,6 @@ class Fortress(BaseModel):
     def is_stronghold_unlocked(self) -> bool:
         return any(tower.hp == 0 for tower in self.defense_towers)
 
-    @property
-    def towers(self) -> list[Tower]:
-        towers = []
-        towers.append(self.stronghold)
-        for tower in self.defense_towers:
-            towers.append(tower)
-        for tower in self.satellites:
-            towers.append(tower)
-        return towers
-
     def __str__(self) -> str:
         table = PrettyTable()
         table.field_names = [
@@ -458,13 +448,6 @@ class Guild(BaseModel):
                     if "max_satellite_hp" in info.data and not satellite.get("max_hp"):
                         satellite["max_hp"] = info.data["max_satellite_hp"]
         return value
-
-    @property
-    def towers(self) -> list[Tower]:
-        towers = []
-        for fortress in self.fortresses:
-            towers.extend(fortress.towers)
-        return towers
 
     def allocate_remaining_tokens(self) -> tuple[int, list[int]]:
         """
