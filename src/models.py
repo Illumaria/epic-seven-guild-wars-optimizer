@@ -153,42 +153,6 @@ class Fortress(BaseModel):
 
         return table.get_string()
 
-    # @property
-    # def attack_targets(self) -> list[Tower]:
-    #     sorted_towers = sorted(self.towers, key=lambda x: x.havoc_left_per_token, reverse=True)
-
-    #     stronghold_index = sorted_towers.index(self.stronghold)
-    #     defense_towers_indices = [sorted_towers.index(tower) for tower in self.defense_towers]
-    #     if not self.is_stronghold_unlocked and stronghold_index < min(defense_towers_indices):
-    #         min_defense_towers_index = min(defense_towers_indices)
-    #         sorted_towers[min_defense_towers_index], sorted_towers[stronghold_index] = sorted_towers[stronghold_index], sorted_towers[min_defense_towers_index]
-
-    #     return sorted_towers
-
-    @property
-    def attack_targets(self) -> list[Tower]:
-        towers_copy = self.towers.copy()
-
-        stronghold_index = towers_copy.index(self.stronghold)
-        defense_towers_indices = [
-            towers_copy.index(tower) for tower in self.defense_towers
-        ]
-
-        if not self.is_stronghold_unlocked and stronghold_index < min(
-            defense_towers_indices
-        ):
-            min_defense_towers_index = min(defense_towers_indices)
-            towers_copy[min_defense_towers_index].havoc_left_per_token = (
-                towers_copy[min_defense_towers_index].havoc_left
-                + towers_copy[stronghold_index].max_havoc
-            ) / towers_copy[min_defense_towers_index].tokens_to_destroy
-
-        sorted_towers = sorted(
-            towers_copy, key=lambda x: x.havoc_left_per_token, reverse=True
-        )
-
-        return sorted_towers
-
     def dp(self, max_tokens: int) -> list[int]:
         """
         Compute the maximum havoc achievable from one fortress for each
@@ -385,21 +349,6 @@ class Guild(BaseModel):
         for fortress in self.fortresses:
             towers.extend(fortress.towers)
         return towers
-
-    @property
-    def attack_targets(self) -> list[Tower]:
-        # recalculated_havoc_left_per_token: dict[Tower, float] = {}
-
-        # for fortress in self.fortresses:
-        #     for tower in fortress.towers:
-        #         recalculated_havoc_left_per_token[tower] = tower.havoc_left_per_token
-        #     if not fortress.is_stronghold_unlocked:
-        all_attack_targets = [fortress.attack_targets for fortress in self.fortresses]
-        return list(
-            merge(
-                *all_attack_targets, key=lambda x: x.havoc_left_per_token, reverse=True
-            )
-        )
 
     def allocate_remaining_tokens(self) -> tuple[int, list[int]]:
         """
