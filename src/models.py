@@ -12,7 +12,7 @@ from pydantic import (
 )
 
 from src.constants import MAX_DMG_PER_TOKEN
-from src.knapsack import backtrack, knapsack_backtrack
+from src.knapsack import knapsack, knapsack_backtrack
 
 
 class Tower(BaseModel):
@@ -165,7 +165,7 @@ class Fortress(BaseModel):
         # ── Case 1: Stronghold already unlocked ──
         # All towers are independent; just knapsack over everything.
         if self.is_stronghold_unlocked:
-            dp, _ = knapsack_backtrack(
+            dp, _ = knapsack(
                 tower_tables=satellite_havoc_matrix
                 + defense_tower_havoc_matrix
                 + [stronghold_havoc_vector],
@@ -182,7 +182,7 @@ class Fortress(BaseModel):
         # tokens. The remaining tokens are distributed among stronghold + other towers.
 
         # Sub-case A: skip stronghold entirely
-        dp_no_stronghold, _ = knapsack_backtrack(
+        dp_no_stronghold, _ = knapsack(
             tower_tables=satellite_havoc_matrix + defense_tower_havoc_matrix,
             budget=max_tokens,
         )
@@ -208,9 +208,7 @@ class Fortress(BaseModel):
             )
 
             remaining_budget = max_tokens - min_defense_tower_tokens
-            dp_others, _ = knapsack_backtrack(
-                tower_tables=other_tables, budget=remaining_budget
-            )
+            dp_others, _ = knapsack(tower_tables=other_tables, budget=remaining_budget)
 
             defense_tower_j_havoc = defense_tower_havoc_matrix[j][
                 min_defense_tower_tokens
@@ -302,37 +300,53 @@ class Fortress(BaseModel):
                 tower_tables=other_tables, budget=remaining_budget
             )
 
-            total_val = (
+            val = (
                 defense_tower.havoc(min_defense_tower_tokens)
                 + dp_others[remaining_budget]
             )
-            if total_val > best_val:
-                best_val = total_val
-                new_alloc: list[tuple[Tower, int]] = []
-                for k, _ in enumerate(self.satellites):
-                    new_alloc.append((self.satellites[k], alloc_others[k]))
-                other_dt_cursor = len(self.satellites)
-                for i, _ in enumerate(self.defense_towers):
-                    if i == j:
-                        new_alloc.append(
-                            (self.defense_towers[i], min_defense_tower_tokens)
-                        )
-                    else:
-                        new_alloc.append(
-                            (self.defense_towers[i], alloc_others[other_dt_cursor])
-                        )
-                        other_dt_cursor += 1
-                stronghold_alloc = alloc_others[
-                    len(self.satellites) + len(other_defense_tower_matrix)
-                ]
-                new_alloc.append((self.stronghold, stronghold_alloc))
-                best_alloc = new_alloc
+            if val > best_val:
+                best_val = val
+                best_alloc = self.generate_new_alloc(
+                    alloc_others=alloc_others,
+                    cur_defense_tower_index=j,
+                    cur_defense_tower_tokens_to_destroy=min_defense_tower_tokens,
+                )
 
         return best_alloc
 
+    def generate_new_alloc(
+        self,
+        alloc_others: list[int],
+        cur_defense_tower_index: int,
+        cur_defense_tower_tokens_to_destroy: int,
+    ) -> list[tuple[Tower, int]]:
+        new_alloc: list[tuple[Tower, int]] = []
+
+        for k, _ in enumerate(self.satellites):
+            new_alloc.append((self.satellites[k], alloc_others[k]))
+
+        other_dt_cursor = len(self.satellites)
+        for i, _ in enumerate(self.defense_towers):
+            if i == cur_defense_tower_index:
+                new_alloc.append(
+                    (self.defense_towers[i], cur_defense_tower_tokens_to_destroy)
+                )
+            else:
+                new_alloc.append(
+                    (self.defense_towers[i], alloc_others[other_dt_cursor])
+                )
+                other_dt_cursor += 1
+
+        stronghold_alloc = alloc_others[
+            len(self.satellites) + len(self.defense_towers) - 1
+        ]
+        new_alloc.append((self.stronghold, stronghold_alloc))
+
+        return new_alloc
+
     def dp_and_resolve_allocation(
         self, max_tokens: int
-    ) -> tuple[list[int], list[tuple[Tower, int]]]:
+    ) -> tuple[list[int], list[tuple[Tower, list[int]]]]:
         """
         TODO: combine docstrings from max_havoc_per_tokens_invested()
         and per_tower_token_allocation() properly.
@@ -361,14 +375,14 @@ class Fortress(BaseModel):
         # ── Case 1: Stronghold already unlocked ──
         # All towers are independent; just knapsack over everything.
         if self.is_stronghold_unlocked:
-            dp, alloc = knapsack_backtrack(
+            dp, choices = knapsack(
                 tower_tables=satellite_havoc_matrix
                 + defense_tower_havoc_matrix
                 + [stronghold_havoc_vector],
                 budget=max_tokens,
             )
             return dp, list(
-                zip(self.satellites + self.defense_towers + [self.stronghold], alloc)
+                zip(self.satellites + self.defense_towers + [self.stronghold], choices)
             )
 
         # ── Case 2: Stronghold locked ──
@@ -380,12 +394,15 @@ class Fortress(BaseModel):
         # tokens. The remaining tokens are distributed among stronghold + other towers.
 
         # Sub-case A: skip stronghold entirely
-        dp_no_stronghold, _ = knapsack_backtrack(
+        dp_no_stronghold, choices_no_stronghold = knapsack(
             tower_tables=satellite_havoc_matrix + defense_tower_havoc_matrix,
             budget=max_tokens,
         )
 
-        best: list[int] = dp_no_stronghold
+        best_dp: list[int] = dp_no_stronghold
+        best_choices: list[tuple[Tower, list[int]]] = list(
+            zip(self.satellites + self.defense_towers, choices_no_stronghold)
+        ) + [(self.stronghold, 0)]
 
         # Sub-case B: try each defense tower as the stronghold unlocker
         for j, defense_tower in enumerate(self.defense_towers):
@@ -406,9 +423,7 @@ class Fortress(BaseModel):
             )
 
             remaining_budget = max_tokens - min_defense_tower_tokens
-            dp_others, _ = knapsack_backtrack(
-                tower_tables=other_tables, budget=remaining_budget
-            )
+            dp_others, _ = knapsack(tower_tables=other_tables, budget=remaining_budget)
 
             defense_tower_j_havoc = defense_tower_havoc_matrix[j][
                 min_defense_tower_tokens
@@ -416,10 +431,10 @@ class Fortress(BaseModel):
 
             for t in range(min_defense_tower_tokens, max_tokens + 1):
                 val = defense_tower_j_havoc + dp_others[t - min_defense_tower_tokens]
-                if val > best[t]:
-                    best[t] = val
+                if val > best_dp[t]:
+                    best_dp[t] = val
 
-        return best
+        return best_dp, best_choices
 
 
 class Guild(BaseModel):
