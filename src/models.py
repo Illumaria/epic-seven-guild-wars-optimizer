@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Annotated, Any
+from typing import Annotated, Any, Sequence
 
 from prettytable import PrettyTable
 from pydantic import (
@@ -221,7 +221,9 @@ class Fortress(BaseModel):
 
         return best
 
-    def per_tower_token_allocation(self, max_tokens: int) -> list[tuple[Tower, int]]:
+    def per_tower_token_allocation(
+        self, max_tokens: int
+    ) -> Sequence[tuple[Tower, int]]:
         """
         Given a token budget, return per-tower token allocation that maximizes havoc.
         Mirrors the logic of dp() but with backtracking to recover the allocation.
@@ -273,7 +275,7 @@ class Fortress(BaseModel):
         )
 
         best_val: int = dp_no_stronghold[max_tokens]
-        best_alloc: list[tuple[Tower, int]] = list(
+        best_alloc: Sequence[tuple[Tower, int]] = list(
             zip(self.satellites + self.defense_towers, alloc_no_stronghold)
         ) + [(self.stronghold, 0)]
 
@@ -346,7 +348,7 @@ class Fortress(BaseModel):
 
     def dp_and_resolve_allocation(
         self, max_tokens: int
-    ) -> tuple[list[int], list[tuple[Tower, list[int]]]]:
+    ) -> tuple[list[int], Sequence[tuple[Tower, list[int]]]]:
         """
         TODO: combine docstrings from max_havoc_per_tokens_invested()
         and per_tower_token_allocation() properly.
@@ -400,9 +402,9 @@ class Fortress(BaseModel):
         )
 
         best_dp: list[int] = dp_no_stronghold
-        best_choices: list[tuple[Tower, list[int]]] = list(
+        best_choices: Sequence[tuple[Tower, list[int]]] = list(
             zip(self.satellites + self.defense_towers, choices_no_stronghold)
-        ) + [(self.stronghold, 0)]
+        ) + [(self.stronghold, [0])]
 
         # Sub-case B: try each defense tower as the stronghold unlocker
         for j, defense_tower in enumerate(self.defense_towers):
