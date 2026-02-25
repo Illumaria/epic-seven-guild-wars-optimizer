@@ -64,6 +64,27 @@ def knapsack(
 
 
 def backtrack(choices: list[list[int]], budget: int) -> list[int]:
+    """
+    Reconstruct per-tower token allocation for havoc maximization.
+
+    Args:
+        choices (list[list[int]]): A choices matrix, where
+            choices[i][j] (0 <= i < len(towers), 0 <= j <= budget) is
+            the amount of tokens that has to be invested in tower i, such that
+            by spending j total tokens over all towers we get maximum possible havoc.
+        budget (int): The amount of tokens to distribute across all towers.
+
+    Returns:
+        list[int]: Per-tower token allocation for havoc maximization.
+
+    Examples:
+        >>> backtrack(choices=[], budget=0)
+        []
+        >>> backtrack(choices=[[0, 1, 1], [0, 1, 2], [0, 1, 2]], budget=2)
+        [0, 0, 2]
+        >>> backtrack(choices=[[0, 1, 1], [0, 1, 1], [0, 1, 1]], budget=2)
+        [0, 1, 1]
+    """
     alloc: list[int] = [0] * len(choices)
     remaining: int = budget
     for i in range(len(choices) - 1, -1, -1):

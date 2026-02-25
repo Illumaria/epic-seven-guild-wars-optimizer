@@ -1,6 +1,6 @@
 import pytest
 
-from src.knapsack import knapsack_backtrack, new_knapsack
+from src.knapsack import knapsack, knapsack_backtrack, new_knapsack
 from src.models import Tower
 
 
@@ -50,7 +50,7 @@ def test_knapsack_works_correctly(
     budget: int,
     expected_result: list[int],
 ) -> None:
-    actual_result, _ = knapsack_backtrack(tower_tables=tower_tables, budget=budget)
+    actual_result, _ = knapsack(tower_tables=tower_tables, budget=budget)
 
     assert actual_result == expected_result
 

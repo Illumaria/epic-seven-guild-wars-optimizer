@@ -35,7 +35,7 @@ format: $(VENV)
 # Target to run tests
 test: install
 	@echo "Running tests..."
-	uv run pytest --cov=src -vv
+	uv run pytest --doctest-modules --cov=src -vv
 
 # Target to run your application (adjust 'main.py' as needed)
 run: install
