@@ -81,7 +81,7 @@ class Tower(BaseModel):
             current_hp -= MAX_DMG_PER_TOKEN
             if current_hp <= 0:
                 lines.append(
-                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {self.havoc_left} havoc (destroyed)"
+                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {self.max_havoc - self.max_hp + hp_before} havoc (destroyed)"
                 )
             else:
                 lines.append(
