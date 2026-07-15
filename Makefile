@@ -30,7 +30,8 @@ install: $(VENV)
 # Target to format Python code
 format: $(VENV)
 	@echo "Running formatter..."
-	uv format
+	uv run ruff check --select I --fix
+	uv run ruff format
 
 # Target to run tests
 test: install

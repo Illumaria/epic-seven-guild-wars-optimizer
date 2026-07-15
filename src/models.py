@@ -7,8 +7,8 @@ from pydantic import (
     Field,
     NonNegativeInt,
     PositiveInt,
-    field_validator,
     ValidationInfo,
+    field_validator,
 )
 
 from src.constants import MAX_DMG_PER_TOKEN
@@ -72,20 +72,20 @@ class Tower(BaseModel):
         if tokens <= 0 or self.hp <= 0:
             return []
 
-        lines = []
         current_hp = self.hp
+        lines = [f"    {self.__class__.__name__} ({current_hp}/{self.max_hp} HP):"]
         for _ in range(tokens):
             if current_hp <= 0:
                 break
             hp_before = current_hp
-            current_hp -= MAX_DMG_PER_TOKEN
-            if current_hp <= 0:
+            current_hp = max(current_hp - MAX_DMG_PER_TOKEN, 0)
+            if current_hp == 0:
                 lines.append(
-                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {self.max_havoc - self.max_hp + hp_before} havoc (destroyed)"
+                    f"        - [{hp_before} -> {current_hp}] HP -> {self.max_havoc - self.max_hp + hp_before} havoc (destroyed)"
                 )
             else:
                 lines.append(
-                    f"    {self.__class__.__name__} ({hp_before}/{self.max_hp} HP) -> {MAX_DMG_PER_TOKEN} havoc"
+                    f"        - [{hp_before} -> {current_hp}] HP -> {MAX_DMG_PER_TOKEN} havoc"
                 )
         return lines
 
@@ -369,6 +369,8 @@ class Guild(BaseModel):
         max_havoc, per_fortress_tower_alloc = self.allocate_remaining_tokens()
 
         lines: list[str] = []
+        lines.append(f"Current havoc of {self.name}: {self.current_havoc}\n")
+        lines.append(f"Attack targets for best case scenario:")
         for i, tower_alloc in enumerate(per_fortress_tower_alloc):
             lines.append(f"Fortress {i + 1}:")
             if len(tower_alloc) == 0:
@@ -382,7 +384,7 @@ class Guild(BaseModel):
             )
             for tower, tower_tokens in ordered:
                 lines.extend(tower.format_attacks(tokens=tower_tokens))
-        lines.append(f"\nTotal: {self.current_havoc + max_havoc} havoc")
+        lines.append(f"\nMax possible havoc: {self.current_havoc + max_havoc}\n")
         return "\n".join(lines)
 
 
